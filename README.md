@@ -1,281 +1,120 @@
-# PyQwerty Discord Bot 🎮
+# pyqwerty discord bot
 
-A Discord bot that authentically mimics PyQwerty's writing style using AI and comprehensive message analysis.
+discord bot that talks like pyqwerty fr fr
 
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](docker-compose.yml)
-[![Python](https://img.shields.io/badge/Python-3.11+-green?logo=python)](bot/requirements.txt)
-[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+## what it does
 
-## 🌟 Features
+- talks exactly like a 16-18 year old asian american gamer from texas
+- responds to discord messages with pyqwerty's writing style
+- uses ai but acts like a real person not an assistant
+- 100% response when mentioned, 25% for random chat
+- obsessed with valorant minecraft and complaining about school
 
-- **🎯 Authentic Style**: Trained on 1,386 real PyQwerty messages
-- **🤖 AI-Powered**: Uses OpenRouter with Google Gemini models  
-- **💬 Smart Responses**: 100% response rate to mentions, natural ambient responses
-- **📱 Discord Integration**: Reply system for clean conversation threading
-- **🐳 Docker Ready**: Production-ready containerized deployment
-- **📊 Comprehensive Analysis**: Detailed style patterns and behavioral modeling
+## writing style rules
 
-## 🚀 Quick Start
+### punctuation
+- NEVER use periods question marks or exclamation points
+- messages just end abruptly
+- only apostrophes for contractions (i'm, don't, y'all)
 
-### Option 1: Docker Deployment (Recommended)
+### capitalization  
+- everything lowercase always
+- ONLY ALL-CAPS when super mad or yelling (WTF, DAMN, I CANT)
 
+### slang and vocab
+mandatory words: cuz, fr, ngl, rn, idk, lmfao, yall, bro, bruh, wanna, gonna, gotta
+gaming words: washed, cooked, hardstuck, elo hell, smurfing, throwing
+signature phrases: "idk what im doing with my life", "trust", "absolute cinema", "it'll be funny"
+
+### example responses
+good clip posted: "fire"
+friend shows off gear: "lemme get that"  
+someone asks about rank: "hardstuck gold bro"
+boring topic: stays silent or says "im bored yall wanna play lifesteal"
+
+## setup
+
+### docker (easiest)
 ```bash
-# 1. Clone the repository
-git clone https://github.com/yourusername/pyqwerty-bot.git
-cd pyqwerty-bot
-
-# 2. Configure environment
+git clone https://github.com/vincenthopf/pybot.git
+cd pybot
 cp .env.production .env
-nano .env  # Add your Discord token and OpenRouter API key
-
-# 3. Deploy with Docker
+# edit .env with your discord token and openrouter api key
 docker-compose up -d
-
-# 4. Check logs
-docker-compose logs -f pyqwerty-bot
 ```
 
-### Option 2: Local Development
-
+### manual setup
 ```bash
-# 1. Setup Python environment
-python3 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# 2. Install dependencies
 cd bot/
 pip install -r requirements.txt
-
-# 3. Configure environment
-cp ../.env.production .env
-nano .env  # Add your credentials
-
-# 4. Run the bot
+cp ../.env.production .env  
+# edit .env file
 python run_bot.py
 ```
 
-## ⚙️ Configuration
+## config
 
-### Required Environment Variables
-
-```bash
-# Discord Configuration
-DISCORD_BOT_TOKEN=your_bot_token_here
-OPENROUTER_API_KEY=your_openrouter_key_here
-
-# Optional (have sensible defaults)
-OPENROUTER_MODEL=google/gemini-2.5-flash-preview-05-20
-RATE_LIMIT_MESSAGES=30
+need these:
+```
+DISCORD_BOT_TOKEN=your_token
+OPENROUTER_API_KEY=your_key
 ```
 
-### Discord Bot Setup
+discord bot setup:
+1. go to discord developer portal
+2. make new bot  
+3. enable message content intent and server members intent
+4. copy token to .env
+5. invite bot to server
 
-1. Go to [Discord Developer Portal](https://discord.com/developers/applications/)
-2. Create new application → Bot
-3. Enable these **Privileged Gateway Intents**:
-   - ✅ Message Content Intent
-   - ✅ Server Members Intent
-4. Copy bot token to `.env` file
-5. Invite bot with "Read Messages" and "Read Message History" permissions
+openrouter setup:
+1. sign up at openrouter.ai
+2. get api key
+3. add to .env
 
-### OpenRouter Setup
+## how it works
 
-1. Sign up at [OpenRouter](https://openrouter.ai/)
-2. Get API key from dashboard
-3. Add to `.env` file
-4. The bot uses Google Gemini models (very cost-effective)
+responds to discord messages like pyqwerty would
+- 100% response when mentioned  
+- 25% random responses to regular chat
+- uses last 20 messages for context
+- rate limited so it doesnt spam
 
-## 🎮 Bot Behavior
-
-### Authentic PyQwerty Style
-- **Brief messages**: Averages 4.8 words per response
-- **Casual tone**: 73% lowercase, minimal punctuation
-- **Gaming focus**: Valorant, Minecraft references
-- **Slang usage**: "bro", "fr", "nah", "ur", "wtf"
-- **Self-deprecating humor**: "hardstuck", "washed", "cooked"
-
-### Response Patterns
-- **100% response rate** when directly mentioned
-- **25% base response rate** for ambient chat
-- **Higher probability** for questions, gaming topics, mentions
-- **Rate limited**: 30+ seconds between responses
-- **Reply system**: Uses Discord threads instead of mentions
-
-### Example Interactions
-
+example interactions:
 ```
-User: "@PyQwerty what's your rank?"
-Bot: [REPLIES] "hardstuck gold bro"
+user: "check out my new setup"
+bot: "fire" or "you should send me a pc fr"
 
-User: "anyone down for valorant?"  
-Bot: "im down but my internet is trash rn"
+user: "@bot whats your rank"  
+bot: "hardstuck gold bro"
 
-User: "just hit diamond!"
-Bot: "fire"
+user: "anyone down for valorant"
+bot: "im down but my internet is trash rn"
 ```
 
-## 📊 Style Analysis
-
-The bot's authenticity comes from analyzing **1,386 real PyQwerty messages**:
-
-| Metric | Value | Description |
-|--------|-------|-------------|
-| **Avg Message Length** | 4.8 words | Very brief responses |
-| **Lowercase Usage** | 73% | Casual capitalization |
-| **No Punctuation** | 92.5% | Minimal ending punctuation |
-| **Emoji Usage** | 0.2% | Rarely uses emojis |
-| **Gaming References** | High | Valorant, Minecraft focused |
-
-## 🏗️ Architecture
-
+## file structure
 ```
-📁 Project Structure
-├── 🤖 bot/                    # Production bot container
-│   ├── src/                   # Bot source code
-│   ├── Dockerfile            # Container configuration  
-│   ├── requirements.txt      # Minimal dependencies
-│   └── systemprompt.md       # 7,169-char persona prompt
-├── 🔧 development/           # Analysis tools (optional)
-│   ├── scripts/              # Message crawler, analyzers
-│   └── data/                 # Raw Discord exports
-├── docker-compose.yml        # Production deployment
-└── .env.production          # Environment template
+bot/                  # main bot code
+├── src/core/bot.py   # discord bot logic  
+├── src/ai/           # ai response generation
+└── systemprompt.md   # personality rules
+
+development/          # optional analysis tools
+└── scripts/          # message crawler etc
 ```
 
-### Core Components
+## troubleshooting
 
-- **`src/core/bot.py`**: Main Discord bot with event handling
-- **`src/ai/llm_client.py`**: OpenRouter API integration
-- **`src/ai/prompt_builder.py`**: Loads systemprompt.md + context
-- **`src/ai/style_validator.py`**: Ensures authentic responses
-- **`systemprompt.md`**: Complete PyQwerty persona (unchanged)
+bot not responding: check discord token and permissions
+api errors: check openrouter key  
+docker issues: make sure docker is running
 
-## 🔧 Development
+check logs: `docker-compose logs -f pyqwerty-bot`
 
-### Message Analysis Tools
+## license
 
-```bash
-# Crawl Discord messages (requires bot permissions)
-python development/scripts/message_crawler.py
-
-# Analyze writing style patterns  
-python development/scripts/deep_style_analyzer.py
-
-# Extract categorized examples
-python development/scripts/message_examples_extractor.py
-```
-
-### Testing
-
-```bash
-# Test bot components
-python development/test_bot.py
-
-# Test Docker build
-./test_docker_build.sh
-```
-
-## 🐳 Production Deployment
-
-### Docker Compose (Recommended)
-
-```yaml
-# docker-compose.yml
-services:
-  pyqwerty-bot:
-    build: ./bot
-    environment:
-      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-    restart: unless-stopped
-    # Resource limits included
-```
-
-### Health Monitoring
-
-```bash
-# Check bot health
-curl http://localhost:8080/health
-
-# Detailed status
-curl http://localhost:8080/status
-
-# View logs
-docker-compose logs -f pyqwerty-bot
-```
-
-### Resource Requirements
-
-| Environment | Memory | CPU | Storage |
-|-------------|--------|-----|---------|
-| **Development** | 256MB | 0.25 cores | 100MB |
-| **Production** | 512MB | 0.5 cores | 200MB |
-| **Recommended VPS** | 1GB RAM | 1 vCPU | 10GB disk |
-
-## 🛡️ Security & Privacy
-
-- **🔐 No hardcoded secrets**: All sensitive data in environment variables
-- **👤 Non-root container**: Runs as unprivileged user
-- **🚫 No data persistence**: No message storage, respects privacy
-- **⚡ Rate limiting**: Prevents spam and API abuse
-- **🏥 Health checks**: Built-in monitoring and auto-restart
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Test thoroughly: `python development/test_bot.py`
-4. Commit changes: `git commit -m 'Add amazing feature'`
-5. Push to branch: `git push origin feature/amazing-feature`
-6. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Troubleshooting
-
-### Common Issues
-
-| Issue | Solution |
-|-------|----------|
-| Bot not responding | Check Discord token & permissions |
-| API errors | Verify OpenRouter key & credits |
-| Import errors | Ensure all dependencies installed |
-| Docker build fails | Check Docker version & permissions |
-
-### Debug Commands
-
-```bash
-# Check bot status
-docker-compose ps
-
-# View detailed logs  
-docker-compose logs --tail=100 pyqwerty-bot
-
-# Container health
-docker stats pyqwerty-bot
-
-# Execute shell in container
-docker-compose exec pyqwerty-bot /bin/bash
-```
-
-## 🎯 Roadmap
-
-- [ ] **Multi-server support** with per-server configuration
-- [ ] **Web dashboard** for bot management and analytics  
-- [ ] **Voice chat integration** for gaming sessions
-- [ ] **Custom trigger phrases** and response customization
-- [ ] **Analytics dashboard** showing interaction patterns
-
-## 📞 Support
-
-- **🐛 Bug reports**: [Create an issue](https://github.com/yourusername/pyqwerty-bot/issues)
-- **💡 Feature requests**: [Discussions](https://github.com/yourusername/pyqwerty-bot/discussions)
-- **❓ Questions**: Check [documentation](DEPLOYMENT.md) first
+mit license - see LICENSE file
 
 ---
 
-**Built with ❤️ for authentic Discord interactions** • **Powered by AI & comprehensive style analysis** 
-
-*PyQwerty Bot accurately replicates writing patterns from 1,386 analyzed messages using advanced AI and style validation.*
+*built to perfectly mimic pyqwerty's discord writing style using ai*
