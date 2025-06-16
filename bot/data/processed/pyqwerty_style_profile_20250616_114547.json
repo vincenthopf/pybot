@@ -1,0 +1,445 @@
+{
+  "metadata": {
+    "analysis_date": "2025-06-16T11:45:47.006311",
+    "source_file": "data/raw/pyqwerty_messages_20250616_114226.json",
+    "total_messages_analyzed": 1386
+  },
+  "basic_stats": {
+    "total_messages": 1386,
+    "non_empty_messages": 1309,
+    "avg_message_length": 24.10007639419404,
+    "median_message_length": 19,
+    "avg_word_count": 4.843391902215432,
+    "median_word_count": 4,
+    "avg_char_count": 24.10007639419404,
+    "message_length_range": {
+      "min": 1,
+      "max": 167
+    }
+  },
+  "vocabulary": {
+    "total_words": 5,
+    "unique_words": 1447,
+    "vocabulary_richness": 289.4,
+    "most_common_words": [
+      [
+        "i",
+        302
+      ],
+      [
+        "it",
+        128
+      ],
+      [
+        "to",
+        117
+      ],
+      [
+        "s",
+        110
+      ],
+      [
+        "the",
+        102
+      ],
+      [
+        "a",
+        89
+      ],
+      [
+        "and",
+        86
+      ],
+      [
+        "my",
+        83
+      ],
+      [
+        "you",
+        82
+      ],
+      [
+        "is",
+        81
+      ],
+      [
+        "like",
+        76
+      ],
+      [
+        "in",
+        73
+      ],
+      [
+        "that",
+        67
+      ],
+      [
+        "im",
+        67
+      ],
+      [
+        "me",
+        64
+      ],
+      [
+        "this",
+        60
+      ],
+      [
+        "on",
+        60
+      ],
+      [
+        "just",
+        54
+      ],
+      [
+        "what",
+        52
+      ],
+      [
+        "do",
+        49
+      ]
+    ],
+    "most_common_2word_phrases": [
+      [
+        "it s",
+        47
+      ],
+      [
+        "that s",
+        30
+      ],
+      [
+        "i m",
+        23
+      ],
+      [
+        "i have",
+        19
+      ],
+      [
+        "i got",
+        14
+      ],
+      [
+        "i can",
+        13
+      ],
+      [
+        "hop on",
+        13
+      ],
+      [
+        "bro i",
+        12
+      ],
+      [
+        "s not",
+        11
+      ],
+      [
+        "or smth",
+        11
+      ]
+    ],
+    "most_common_3word_phrases": [
+      [
+        "https www youtube",
+        10
+      ],
+      [
+        "www youtube com",
+        10
+      ],
+      [
+        "i don t",
+        8
+      ],
+      [
+        "https tenor com",
+        7
+      ],
+      [
+        "tenor com view",
+        7
+      ],
+      [
+        "youtube com watch",
+        7
+      ],
+      [
+        "com watch v",
+        7
+      ],
+      [
+        "it s not",
+        7
+      ],
+      [
+        "what im doing",
+        5
+      ],
+      [
+        "i have a",
+        5
+      ]
+    ]
+  },
+  "punctuation_and_style": {
+    "punctuation_frequency": {
+      "'": 194,
+      "/": 95,
+      ".": 65,
+      ":": 51,
+      "-": 48,
+      "(": 46,
+      "?": 36,
+      ")": 14,
+      "\"": 9,
+      ",": 2
+    },
+    "style_patterns": {
+      "all_caps_messages": 14,
+      "question_messages": 24,
+      "exclamation_messages": 0,
+      "ellipsis_usage": 3,
+      "repeated_punctuation": 0,
+      "starts_with_lowercase": 914,
+      "no_punctuation_end": 1282
+    },
+    "style_percentages": {
+      "all_caps_messages": 1.0101010101010102,
+      "question_messages": 1.7316017316017316,
+      "exclamation_messages": 0.0,
+      "ellipsis_usage": 0.21645021645021645,
+      "repeated_punctuation": 0.0,
+      "starts_with_lowercase": 65.94516594516594,
+      "no_punctuation_end": 92.4963924963925
+    }
+  },
+  "emoji_usage": {
+    "total_emojis": 3,
+    "unique_emojis": 2,
+    "messages_with_emojis": 3,
+    "emoji_usage_percentage": 0.21645021645021645,
+    "most_common_emojis": [
+      [
+        "😂",
+        2
+      ],
+      [
+        "💀",
+        1
+      ]
+    ],
+    "avg_emojis_per_message": 0.0021645021645021645
+  },
+  "temporal_patterns": {
+    "most_active_hours": [
+      [
+        5,
+        269
+      ],
+      [
+        20,
+        165
+      ],
+      [
+        3,
+        152
+      ],
+      [
+        1,
+        147
+      ],
+      [
+        4,
+        116
+      ]
+    ],
+    "least_active_hours": [
+      [
+        16,
+        11
+      ],
+      [
+        14,
+        10
+      ],
+      [
+        13,
+        2
+      ],
+      [
+        11,
+        2
+      ],
+      [
+        9,
+        2
+      ]
+    ],
+    "most_active_days": [
+      [
+        "Sunday",
+        744
+      ],
+      [
+        "Monday",
+        225
+      ],
+      [
+        "Saturday",
+        184
+      ],
+      [
+        "Tuesday",
+        88
+      ],
+      [
+        "Friday",
+        77
+      ],
+      [
+        "Wednesday",
+        35
+      ],
+      [
+        "Thursday",
+        33
+      ]
+    ],
+    "hour_distribution": {
+      "1": 147,
+      "2": 63,
+      "3": 152,
+      "15": 24,
+      "22": 114,
+      "0": 25,
+      "4": 116,
+      "5": 269,
+      "17": 31,
+      "23": 88,
+      "14": 10,
+      "16": 11,
+      "20": 165,
+      "21": 86,
+      "18": 14,
+      "19": 23,
+      "12": 15,
+      "13": 2,
+      "6": 27,
+      "11": 2,
+      "9": 2
+    },
+    "day_distribution": {
+      "Saturday": 184,
+      "Sunday": 744,
+      "Tuesday": 88,
+      "Thursday": 33,
+      "Friday": 77,
+      "Monday": 225,
+      "Wednesday": 35
+    }
+  },
+  "interaction_patterns": {
+    "reply_percentage": 10.461760461760463,
+    "mention_percentage": 13.203463203463203,
+    "messages_with_reactions": 9,
+    "messages_with_attachments": 98,
+    "messages_with_embeds": 24,
+    "most_mentioned_users": [
+      [
+        609144442108117017,
+        51
+      ],
+      [
+        1034344340442591253,
+        40
+      ],
+      [
+        750413008232120411,
+        25
+      ],
+      [
+        760193840396369921,
+        15
+      ],
+      [
+        665696394258153498,
+        15
+      ]
+    ]
+  },
+  "example_messages": {
+    "short_messages": [
+      "What server",
+      "Crazy",
+      "Idk",
+      "I have soapy",
+      "Cough",
+      "Like after college",
+      "Not yet",
+      "Shut",
+      "Not that hard",
+      "Not that hard"
+    ],
+    "medium_messages": [
+      "Unfortunately yes I am",
+      "Yeah we in a server with him",
+      "He's not joining though",
+      "Y'all should meet irl",
+      "Fly to Australia or smth",
+      "Y'all gotta come to me I'm still under 18",
+      "Wait does anybody live in Chicago",
+      "Cuz I'm going there for Christmas",
+      "Y'all should pull up",
+      "Make jidi fly to you then"
+    ],
+    "long_messages": [
+      "Idk how long ago this is but they demoted me cuz I used the word \"gay\" in an insulting way",
+      "You don't play the game anymore just buy me it trust",
+      "I wanna flex on my friend that's been playing for years",
+      "can we make the server now so we can just grind it for fun",
+      "can yall start the server im really bored and idk what im doing with my life",
+      "also the server aint working for me it's just being stuck on \"connecting to server\"",
+      "I used to be decent at hole anchor spam pvp but now I can barely crystal tap",
+      "yeah i get that lmfao i make like an basketball game with my friends and like nobody shows up even though they said they would",
+      "i cleared my schedule anyways nothing else for me to do",
+      "Can we just permanently remove the egg cuz I don't like how everyone is gonna fight for it"
+    ],
+    "questions": [
+      "and the 7 bil for hyperion?",
+      "frfr ?",
+      "maybe reschedule to weekend?",
+      "you wanna open server rn?",
+      "just some random chest?",
+      "The one with the keyboards?",
+      "29?",
+      "Wait fr?",
+      "Real?",
+      "Real?"
+    ],
+    "exclamations": [],
+    "casual_responses": [
+      "Yeah we in a server with him",
+      "Nah but fr irl meetup would be crazy",
+      "I'm still in spoke's lmfao",
+      "frfr ?",
+      "I wanna flex on my friend that's been playing for years",
+      "nah",
+      "nah i wanna do smth",
+      "yeah",
+      "nah i remember you",
+      "nah it's oak"
+    ],
+    "with_emojis": [
+      "😂",
+      "Planted 4 times 😂",
+      "Bro 💀"
+    ]
+  }
+}
