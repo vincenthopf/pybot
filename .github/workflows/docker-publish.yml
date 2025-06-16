@@ -75,17 +75,21 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Update docker-compose.yml
       run: |
         # Update docker-compose.yml to use the new GHCR image
         sed -i 's|build: ./bot|image: ghcr.io/${{ github.repository }}:latest|g' docker-compose.yml
         
-        # Create production docker-compose file
+        # Ensure production docker-compose file is up to date
         cat > docker-compose.prod.yml << 'EOF'
         services:
           pyqwerty-bot:
@@ -117,8 +121,12 @@ jobs:
     
     - name: Commit updated compose files
       run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
         git add docker-compose.yml docker-compose.prod.yml
-        git diff --staged --quiet || git commit -m "Update Docker Compose to use GHCR image [skip ci]"
-        git push
+        if ! git diff --staged --quiet; then
+          git commit -m "Update Docker Compose to use GHCR image [skip ci]"
+          git push
+        else
+          echo "No changes to commit"
+        fi
