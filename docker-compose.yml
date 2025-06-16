@@ -1,33 +1,15 @@
-version: '3.8'
-
 services:
   pyqwerty-bot:
-    build:
-      context: ./bot
-      dockerfile: Dockerfile
-    container_name: pyqwerty-discord-bot
+    image: ghcr.io/vincenthopf/pybot:latest
+    container_name: pyqwerty-bot
     restart: unless-stopped
     environment:
-      # Discord Configuration
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
-      - TARGET_USER_ID=${TARGET_USER_ID:-707614458826194955}
-      - TARGET_USERNAME=${TARGET_USERNAME:-pyqwerty123}
-      
-      # OpenRouter Configuration
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - OPENROUTER_MODEL=${OPENROUTER_MODEL:-google/gemini-2.5-flash-preview-05-20}
-      - OPENROUTER_MAX_TOKENS=${OPENROUTER_MAX_TOKENS:-150}
-      - OPENROUTER_TEMPERATURE=${OPENROUTER_TEMPERATURE:-0.8}
-      
-      # Bot Configuration
       - RATE_LIMIT_MESSAGES=${RATE_LIMIT_MESSAGES:-30}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-    
-    # Health check endpoint (optional)
-    # ports:
-    #   - "8080:8080"
-    
-    # Resource limits
+    ports:
+      - "8080:8080"
     deploy:
       resources:
         limits:
@@ -36,18 +18,9 @@ services:
         reservations:
           memory: 256M
           cpus: '0.25'
-    
-    # Logging configuration
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    
-    # Network (optional, for isolation)
-    networks:
-      - pyqwerty-network
-
-networks:
-  pyqwerty-network:
-    driver: bridge
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
