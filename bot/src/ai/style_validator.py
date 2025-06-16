@@ -60,7 +60,7 @@ class StyleValidator:
             'contractions': ['im', 'ur', 'dont', 'cant', 'wont', 'ill', 'youre']
         }
     
-    def validate_and_adjust(self, response: str, allow_long: bool = False) -> str:
+    def validate_and_adjust(self, response: str) -> str:
         """Validate response against style patterns and adjust if needed"""
         if not response or not response.strip():
             return ""
@@ -77,8 +77,8 @@ class StyleValidator:
         # 3. Remove ending punctuation (92.5% of messages have no ending punctuation)
         adjusted = self.remove_ending_punctuation(adjusted)
         
-        # 4. Check message length and adjust if too verbose
-        adjusted = self.adjust_message_length(adjusted, allow_long)
+        # 4. Keep full message length - no truncation
+        # (removed message length adjustment to show full responses)
         
         # 5. Ensure slang/contractions are used authentically
         adjusted = self.apply_authentic_slang(adjusted)
@@ -98,6 +98,13 @@ class StyleValidator:
         # Pattern matches <@123456789> and <@!123456789>
         mention_pattern = r'<@!?\d+>'
         text = re.sub(mention_pattern, '', text).strip()
+        
+        # Also remove any remaining @ symbols followed by usernames/words
+        # This catches cases where LLM tries to mention without proper Discord format
+        text = re.sub(r'@\w+', '', text).strip()
+        
+        # Remove any text patterns that look like attempts to mention users
+        text = re.sub(r'@[a-zA-Z0-9_]+', '', text).strip()
         
         # Clean up any double spaces left behind
         text = ' '.join(text.split())
@@ -134,22 +141,12 @@ class StyleValidator:
         
         return text
     
-    def adjust_message_length(self, text: str, allow_long: bool = False) -> str:
+    def adjust_message_length(self, text: str) -> str:
         """Adjust message length to match typical patterns"""
         words = text.split()
         word_count = len(words)
         
-        # If long messages are allowed, be more lenient
-        if allow_long:
-            if word_count > 30:
-                # Very long - take first 2 sentences or reasonable chunk
-                sentences = re.split(r'[.!?]', text)
-                if len(sentences) > 2:
-                    return '. '.join(sentences[:2]).strip()
-                return ' '.join(words[:25])
-            return text
-        
-        # Standard mode - keep it brief but not overly restrictive
+        # Keep it brief but not overly restrictive
         if word_count > 20:
             # Very long - take first sentence or reasonable chunk
             sentences = re.split(r'[.!?]', text)

@@ -27,7 +27,7 @@ class PyQwertyBot:
         # Configuration
         self.target_user_id = int(os.getenv('TARGET_USER_ID', '707614458826194955'))
         self.bot_token = os.getenv('DISCORD_BOT_TOKEN')
-        self.rate_limit_seconds = int(os.getenv('RATE_LIMIT_MESSAGES', '30'))
+        self.rate_limit_seconds = int(os.getenv('RATE_LIMIT_MESSAGES', '8'))
         
         # Discord setup
         intents = discord.Intents.default()
@@ -48,11 +48,7 @@ class PyQwertyBot:
         self.message_history = {}     # channel_id -> list of recent messages
         self.is_active = True
         self.base_response_rate = 0.25  # Default 25% response rate
-        self.allow_long_messages = False  # Allow longer responses
         self.allow_gifs = False       # Allow GIF responses
-        self.patience_enabled = True  # Enable automatic patience assessment
-        self.patience_level = {}      # channel_id -> patience level (0-100)
-        self.message_count_since_rage_check = {}  # channel_id -> count
         
         # Setup event handlers
         self.client.event(self.on_ready)
@@ -90,8 +86,6 @@ class PyQwertyBot:
         
         if channel_id not in self.message_history:
             self.message_history[channel_id] = []
-            self.patience_level[channel_id] = 70  # Start at neutral patience
-            self.message_count_since_rage_check[channel_id] = 0
         
         # Add message to history
         message_data = {
@@ -110,16 +104,6 @@ class PyQwertyBot:
         # Keep only last 25 messages (we'll use 20 for context)
         if len(self.message_history[channel_id]) > 25:
             self.message_history[channel_id] = self.message_history[channel_id][-25:]
-        
-        # Increment message count for rage assessment
-        self.message_count_since_rage_check[channel_id] += 1
-        
-        # Check patience level every 4-8 messages (if enabled)
-        if self.patience_enabled:
-            check_interval = random.randint(4, 8)
-            if self.message_count_since_rage_check[channel_id] >= check_interval:
-                await self.assess_patience_level(channel_id)
-                self.message_count_since_rage_check[channel_id] = 0
     
     async def should_respond(self, message: discord.Message) -> bool:
         """Determine if bot should respond to this message"""
@@ -187,58 +171,6 @@ class PyQwertyBot:
         
         return should_respond
     
-    async def assess_patience_level(self, channel_id: int):
-        """Use AI to assess PyQwerty's patience level based on recent messages"""
-        try:
-            recent_messages = self.message_history.get(channel_id, [])[-8:]  # Last 8 messages
-            if len(recent_messages) < 3:
-                return  # Not enough context
-            
-            # Build assessment prompt
-            message_context = "\n".join([
-                f"{msg['author_name']}: {msg['content']}"
-                for msg in recent_messages
-            ])
-            
-            current_patience = self.patience_level.get(channel_id, 70)
-            
-            assessment_prompt = f"""Analyze PyQwerty's patience level based on recent Discord chat.
-
-Current patience: {current_patience}/100 (0=furious, 50=neutral, 100=chill)
-
-Recent messages:
-{message_context}
-
-Consider these patience factors:
-- DECREASE patience if: spam, annoying behavior, people being stupid, trolling, bad gaming takes, interrupting conversations
-- INCREASE patience if: friendly chat, gaming achievements to celebrate, people asking for help nicely, good vibes
-- NEUTRAL: normal conversation, gaming discussions
-
-PyQwerty is a 16-18 year old gamer who gets annoyed by:
-- Spam or repetitive messages
-- People being genuinely stupid or annoying
-- Bad gaming takes or skill issues
-- Being interrupted when trying to organize games
-
-Respond with ONLY a number 0-100 for new patience level."""
-
-            response = await self.llm_client.generate_response(assessment_prompt)
-            
-            try:
-                new_patience = int(response.strip())
-                new_patience = max(0, min(100, new_patience))  # Clamp 0-100
-                
-                old_patience = self.patience_level[channel_id]
-                self.patience_level[channel_id] = new_patience
-                
-                print(f"😤 Patience update for channel {channel_id}: {old_patience} → {new_patience}")
-                
-            except ValueError:
-                print(f"❌ Invalid patience assessment response: {response}")
-                
-        except Exception as e:
-            print(f"❌ Error assessing patience: {e}")
-    
     async def generate_and_send_response(self, trigger_message: discord.Message):
         """Generate and send PyQwerty response"""
         try:
@@ -247,15 +179,10 @@ Respond with ONLY a number 0-100 for new patience level."""
             # Get recent message history for context
             recent_messages = self.message_history.get(channel_id, [])[-20:]  # Last 20 messages
             
-            # Get current patience level for this channel
-            current_patience = self.patience_level.get(channel_id, 70)
-            
-            # Build prompt with message history, patience, and all settings
+            # Build prompt with message history and GIF settings
             prompt = self.prompt_builder.build_prompt(
                 recent_messages, 
                 trigger_message, 
-                patience_level=current_patience,
-                allow_long_messages=self.allow_long_messages,
                 allow_gifs=self.allow_gifs
             )
             
@@ -276,7 +203,7 @@ Respond with ONLY a number 0-100 for new patience level."""
                 await self.send_gif_response(trigger_message, response, gif_url)
             else:
                 # Handle regular text response
-                validated_response = self.style_validator.validate_and_adjust(response, self.allow_long_messages)
+                validated_response = self.style_validator.validate_and_adjust(response)
                 
                 print(f"💬 Sending response: \"{validated_response}\"")
                 
@@ -355,7 +282,7 @@ Respond with ONLY a number 0-100 for new patience level."""
         
         # Validate any remaining text
         if text_response:
-            validated_text = self.style_validator.validate_and_adjust(text_response, self.allow_long_messages)
+            validated_text = self.style_validator.validate_and_adjust(text_response)
         else:
             validated_text = ""
         
@@ -450,12 +377,8 @@ Respond with ONLY a number 0-100 for new patience level."""
         
         elif command == 'status':
             status = "Active" if self.is_active else "Paused"
-            channel_id = message.channel.id
-            patience = self.patience_level.get(channel_id, 70)
-            long_msgs = "Enabled" if self.allow_long_messages else "Disabled"
             gifs = "Enabled" if self.allow_gifs else "Disabled"
-            patience_auto = "Enabled" if self.patience_enabled else "Disabled"
-            await message.channel.send(f"📊 PyQwerty bot status: {status}\n🎯 Response rate: {int(self.base_response_rate * 100)}%\n😤 Patience level: {patience}/100\n🤖 Auto patience: {patience_auto}\n📝 Long messages: {long_msgs}\n🎬 GIFs: {gifs}")
+            await message.channel.send(f"📊 PyQwerty bot status: {status}\n🎯 Response rate: {int(self.base_response_rate * 100)}%\n🎬 GIFs: {gifs}")
         
         elif command.startswith('rate '):
             try:
@@ -468,53 +391,24 @@ Respond with ONLY a number 0-100 for new patience level."""
             except (ValueError, IndexError):
                 await message.channel.send("❌ Usage: `!py rate <0-100>`")
         
-        elif command == 'longmsg':
-            self.allow_long_messages = not self.allow_long_messages
-            status = "enabled" if self.allow_long_messages else "disabled"
-            await message.channel.send(f"📝 Long messages {status}")
-        
         elif command == 'gifs':
             self.allow_gifs = not self.allow_gifs
             status = "enabled" if self.allow_gifs else "disabled"
             await message.channel.send(f"🎬 GIFs {status}")
-        
-        elif command == 'autopatience':
-            self.patience_enabled = not self.patience_enabled
-            status = "enabled" if self.patience_enabled else "disabled"
-            await message.channel.send(f"🤖 Automatic patience assessment {status}")
-        
-        elif command.startswith('patience '):
-            try:
-                channel_id = message.channel.id
-                new_patience = int(command.split()[1])
-                if 0 <= new_patience <= 100:
-                    self.patience_level[channel_id] = new_patience
-                    await message.channel.send(f"😤 Patience level set to {new_patience}/100")
-                else:
-                    await message.channel.send("❌ Patience must be between 0-100")
-            except (ValueError, IndexError):
-                await message.channel.send("❌ Usage: `!py patience <0-100>`")
         
         elif command == 'help':
             help_text = """🤖 **PyQwerty Bot Commands**
             
 `!py pause` - Pause bot responses
 `!py resume` - Resume bot responses  
-`!py status` - Show bot status, response rate, patience level, settings
+`!py status` - Show bot status and settings
 `!py rate <0-100>` - Set response rate percentage
-`!py longmsg` - Toggle long message mode on/off
 `!py gifs` - Toggle GIF responses on/off
-`!py autopatience` - Toggle automatic patience assessment on/off
-`!py patience <0-100>` - Manually set patience level (0=furious, 100=chill)
 `!py help` - Show this help message
 
 **Examples:**
 `!py rate 50` - Respond to 50% of messages
-`!py longmsg` - Allow PyQwerty to write longer responses
-`!py gifs` - Enable PyQwerty to reply with reaction GIFs
-`!py autopatience` - Disable AI patience assessment (manual control only)
-`!py patience 20` - Make PyQwerty angry/frustrated (will send angry GIFs)
-`!py patience 90` - Make PyQwerty chill and friendly"""
+`!py gifs` - Enable PyQwerty to reply with reaction GIFs"""
             await message.channel.send(help_text)
     
     async def start(self):

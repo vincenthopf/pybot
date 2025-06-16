@@ -7,6 +7,8 @@ Loads systemprompt.md and builds complete prompts with message history
 import json
 from pathlib import Path
 from typing import List, Dict, Any
+from datetime import datetime
+import pytz
 import discord
 
 class PromptBuilder:
@@ -30,13 +32,16 @@ class PromptBuilder:
         return content
     
     def format_message_history(self, messages: List[Dict[str, Any]]) -> str:
-        """Format message history for the prompt"""
+        """Format message history for the prompt with improved context"""
         if not messages:
             return "No recent messages in this channel."
         
+        # Ensure we have exactly the messages we want (up to 20)
+        recent_messages = messages[-20:] if len(messages) > 20 else messages
+        
         formatted_messages = []
         
-        for msg in messages:
+        for i, msg in enumerate(recent_messages):
             author_name = msg.get('author_name', 'Unknown')
             content = msg.get('content', '')
             timestamp = msg.get('timestamp', '')
@@ -53,16 +58,22 @@ class PromptBuilder:
             except:
                 time_str = ''
             
-            # Handle mentions in message content
+            # Handle mentions in message content for context
             mentions = msg.get('mentions', [])
             display_content = content
             
-            # Replace user IDs with mention format for context
+            # Keep mentions for context but they'll be removed from response
             for user_id in mentions:
                 display_content = display_content.replace(f'<@{user_id}>', f'<@{user_id}>')
             
-            # Format: [Time] Username: Message
-            if time_str:
+            # Determine if this is the latest message (last in the list)
+            is_latest = (i == len(recent_messages) - 1)
+            prefix = "LATEST MESSAGE:" if is_latest else f"[{time_str}]" if time_str else ""
+            
+            # Format message with clear indication of latest vs previous
+            if is_latest:
+                formatted_msg = f"LATEST MESSAGE: {author_name}: {display_content}"
+            elif time_str:
                 formatted_msg = f"[{time_str}] {author_name}: {display_content}"
             else:
                 formatted_msg = f"{author_name}: {display_content}"
@@ -71,66 +82,59 @@ class PromptBuilder:
         
         return '\n'.join(formatted_messages)
     
-    def build_prompt(self, message_history: List[Dict[str, Any]], trigger_message: discord.Message, patience_level: int = 70, allow_long_messages: bool = False, allow_gifs: bool = False) -> str:
-        """Build complete prompt with system prompt + message history + current state"""
+    def get_texas_time_context(self) -> str:
+        """Get current Texas time context for the prompt"""
+        texas_tz = pytz.timezone('America/Chicago')
+        texas_time = datetime.now(texas_tz)
+        
+        # Format time in a natural way
+        time_str = texas_time.strftime("%I:%M %p")  # 3:45 PM
+        date_str = texas_time.strftime("%A, %B %d")  # Monday, January 15
+        
+        return f"Current time in Texas: {time_str} on {date_str}"
+    
+    def build_prompt(self, message_history: List[Dict[str, Any]], trigger_message: discord.Message, allow_gifs: bool = False) -> str:
+        """Build complete prompt with system prompt + message history + GIF settings"""
         
         # Format the message history
         formatted_history = self.format_message_history(message_history)
         
-        # Build patience context
-        if patience_level <= 20:
-            patience_context = "CURRENT MOOD: You are VERY frustrated/angry. You're more likely to insult people, tell them to shut up, rage at stupid comments, or be aggressive. You might use ALL-CAPS more."
-        elif patience_level <= 40:
-            patience_context = "CURRENT MOOD: You are annoyed/irritated. You're more sarcastic, dismissive, and likely to call people out on stupid stuff."
-        elif patience_level <= 60:
-            patience_context = "CURRENT MOOD: You are somewhat neutral but slightly on edge. Normal PyQwerty behavior."
-        elif patience_level <= 80:
-            patience_context = "CURRENT MOOD: You are in a decent mood. More friendly than usual, but still keeping your personality."
-        else:
-            patience_context = "CURRENT MOOD: You are chill and in a good mood. More helpful and friendly, but still authentically PyQwerty."
-        
-        # Build message length context
-        if allow_long_messages:
-            length_context = "MESSAGE LENGTH: You can write longer responses when needed (2-4 sentences), but still keep your casual style and no ending punctuation."
-        else:
-            length_context = "MESSAGE LENGTH: Keep responses very brief - usually 1-8 words, maximum 1-2 short sentences."
+        # Get current Texas time context
+        time_context = self.get_texas_time_context()
         
         # Build GIF context
         if allow_gifs:
-            gif_context = """GIF RESPONSES: You can now reply with GIFs! Use the format [GIF: search_term] anywhere in your response.
+            gif_context = """GIF RESPONSES: You can reply with GIFs! Use the format [GIF: search_term] anywhere in your response.
 
 Available GIF reactions: fire, rage, angry, frustrated, cooked, washed, crying, dead, gg, valorant, minecraft, gaming, bruh, cringe, sus, sheesh, no way, what
 
 Examples:
 - For amazing plays: "that was insane [GIF: fire]"
-- When angry: "[GIF: rage] shut up bro"
+- When annoyed: "[GIF: rage] shut up bro"
 - For losses: "we're so cooked [GIF: crying]"
 - For cringe moments: "[GIF: bruh]"
 - Just GIFs: "[GIF: sheesh]"
 
-Use GIFs when they fit your reaction naturally - especially when frustrated (rage GIFs), celebrating (fire GIFs), or reacting to cringe."""
+Use GIFs when they fit your reaction naturally - especially when celebrating (fire GIFs) or reacting to cringe."""
         else:
             gif_context = "GIF RESPONSES: Disabled - respond with text only."
         
         # Build the complete prompt
         prompt = f"""{self.system_prompt}
 
-{patience_context}
-
-{length_context}
+{time_context}
 
 {gif_context}
 
-{{message_history}}:
+RECENT CHAT HISTORY (last 20 messages):
 {formatted_history}
 
-You are PyQwerty and have just read the above chat history. Generate your natural response as PyQwerty would, following all the rules in your persona AND your current mood/settings. Remember:
-- Use STRICTLY lowercase (except for ALL-CAPS emphasis when angry)
+You are PyQwerty and have just read the above chat history. The "LATEST MESSAGE" is what just triggered you to respond. Generate your natural response as PyQwerty would, following all the rules in your persona. Remember:
+- Use STRICTLY lowercase (except for ALL-CAPS emphasis when frustrated)
 - NO ending punctuation (., ?, !)
-- React naturally to the most recent message or conversation flow
-- Your patience level affects how aggressive/friendly you are
-- Adjust response length based on settings but maintain your style
+- React naturally to the LATEST MESSAGE while considering the conversation context
 - Use GIFs when enabled and they fit your reaction naturally
+- You can reference the current time if relevant to your response
 
 Your response:"""
         
