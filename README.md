@@ -34,7 +34,16 @@ boring topic: stays silent or says "im bored yall wanna play lifesteal"
 
 ## setup
 
-### docker (easiest)
+### docker from github registry (easiest)
+```bash
+git clone https://github.com/vincenthopf/pybot.git
+cd pybot
+cp .env.production .env
+# edit .env with your discord token and openrouter api key
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### docker local build
 ```bash
 git clone https://github.com/vincenthopf/pybot.git
 cd pybot
@@ -110,6 +119,24 @@ api errors: check openrouter key
 docker issues: make sure docker is running
 
 check logs: `docker-compose logs -f pyqwerty-bot`
+
+## deployment
+
+### github container registry
+pre-built images available at: `ghcr.io/vincenthopf/pybot:latest`
+
+automatic builds on every push to main branch
+- supports amd64 and arm64 architectures
+- includes health checks and resource limits
+- production ready with all features
+
+### production deployment
+```bash
+# quick deploy with pre-built image
+wget https://raw.githubusercontent.com/vincenthopf/pybot/main/docker-compose.prod.yml
+cp .env.production .env  # edit with your tokens
+docker-compose -f docker-compose.prod.yml up -d
+```
 
 ## license
 
