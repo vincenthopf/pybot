@@ -60,7 +60,7 @@ class StyleValidator:
             'contractions': ['im', 'ur', 'dont', 'cant', 'wont', 'ill', 'youre']
         }
     
-    def validate_and_adjust(self, response: str) -> str:
+    def validate_and_adjust(self, response: str, allow_long: bool = False) -> str:
         """Validate response against style patterns and adjust if needed"""
         if not response or not response.strip():
             return ""
@@ -78,7 +78,7 @@ class StyleValidator:
         adjusted = self.remove_ending_punctuation(adjusted)
         
         # 4. Check message length and adjust if too verbose
-        adjusted = self.adjust_message_length(adjusted)
+        adjusted = self.adjust_message_length(adjusted, allow_long)
         
         # 5. Ensure slang/contractions are used authentically
         adjusted = self.apply_authentic_slang(adjusted)
@@ -134,22 +134,29 @@ class StyleValidator:
         
         return text
     
-    def adjust_message_length(self, text: str) -> str:
+    def adjust_message_length(self, text: str, allow_long: bool = False) -> str:
         """Adjust message length to match typical patterns"""
         words = text.split()
         word_count = len(words)
         
-        # If message is too long (>15 words), try to shorten it
-        if word_count > 15:
-            # Keep first part that's more natural
-            if word_count > 20:
-                # Very long - take first sentence or reasonable chunk
+        # If long messages are allowed, be more lenient
+        if allow_long:
+            if word_count > 30:
+                # Very long - take first 2 sentences or reasonable chunk
                 sentences = re.split(r'[.!?]', text)
-                if sentences:
-                    return sentences[0].strip()
-            
-            # Moderately long - trim to key message
-            return ' '.join(words[:12])
+                if len(sentences) > 2:
+                    return '. '.join(sentences[:2]).strip()
+                return ' '.join(words[:25])
+            return text
+        
+        # Standard mode - keep it brief but not overly restrictive
+        if word_count > 20:
+            # Very long - take first sentence or reasonable chunk
+            sentences = re.split(r'[.!?]', text)
+            if sentences and len(sentences[0].split()) > 3:
+                return sentences[0].strip()
+            # If no good sentence break, take first chunk
+            return ' '.join(words[:15])
         
         return text
     

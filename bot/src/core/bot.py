@@ -47,6 +47,12 @@ class PyQwertyBot:
         self.last_response_time = {}  # channel_id -> timestamp
         self.message_history = {}     # channel_id -> list of recent messages
         self.is_active = True
+        self.base_response_rate = 0.25  # Default 25% response rate
+        self.allow_long_messages = False  # Allow longer responses
+        self.allow_gifs = False       # Allow GIF responses
+        self.patience_enabled = True  # Enable automatic patience assessment
+        self.patience_level = {}      # channel_id -> patience level (0-100)
+        self.message_count_since_rage_check = {}  # channel_id -> count
         
         # Setup event handlers
         self.client.event(self.on_ready)
@@ -84,6 +90,8 @@ class PyQwertyBot:
         
         if channel_id not in self.message_history:
             self.message_history[channel_id] = []
+            self.patience_level[channel_id] = 70  # Start at neutral patience
+            self.message_count_since_rage_check[channel_id] = 0
         
         # Add message to history
         message_data = {
@@ -102,6 +110,16 @@ class PyQwertyBot:
         # Keep only last 25 messages (we'll use 20 for context)
         if len(self.message_history[channel_id]) > 25:
             self.message_history[channel_id] = self.message_history[channel_id][-25:]
+        
+        # Increment message count for rage assessment
+        self.message_count_since_rage_check[channel_id] += 1
+        
+        # Check patience level every 4-8 messages (if enabled)
+        if self.patience_enabled:
+            check_interval = random.randint(4, 8)
+            if self.message_count_since_rage_check[channel_id] >= check_interval:
+                await self.assess_patience_level(channel_id)
+                self.message_count_since_rage_check[channel_id] = 0
     
     async def should_respond(self, message: discord.Message) -> bool:
         """Determine if bot should respond to this message"""
@@ -130,7 +148,7 @@ class PyQwertyBot:
         # - Message is about gaming topics
         # - Haven't responded in a while
         
-        response_probability = 0.25  # Base 25% chance (slightly lower since responding to everyone)
+        response_probability = self.base_response_rate  # Configurable base response rate
         
         # Increase probability based on content
         content_lower = message.content.lower()
@@ -169,6 +187,58 @@ class PyQwertyBot:
         
         return should_respond
     
+    async def assess_patience_level(self, channel_id: int):
+        """Use AI to assess PyQwerty's patience level based on recent messages"""
+        try:
+            recent_messages = self.message_history.get(channel_id, [])[-8:]  # Last 8 messages
+            if len(recent_messages) < 3:
+                return  # Not enough context
+            
+            # Build assessment prompt
+            message_context = "\n".join([
+                f"{msg['author_name']}: {msg['content']}"
+                for msg in recent_messages
+            ])
+            
+            current_patience = self.patience_level.get(channel_id, 70)
+            
+            assessment_prompt = f"""Analyze PyQwerty's patience level based on recent Discord chat.
+
+Current patience: {current_patience}/100 (0=furious, 50=neutral, 100=chill)
+
+Recent messages:
+{message_context}
+
+Consider these patience factors:
+- DECREASE patience if: spam, annoying behavior, people being stupid, trolling, bad gaming takes, interrupting conversations
+- INCREASE patience if: friendly chat, gaming achievements to celebrate, people asking for help nicely, good vibes
+- NEUTRAL: normal conversation, gaming discussions
+
+PyQwerty is a 16-18 year old gamer who gets annoyed by:
+- Spam or repetitive messages
+- People being genuinely stupid or annoying
+- Bad gaming takes or skill issues
+- Being interrupted when trying to organize games
+
+Respond with ONLY a number 0-100 for new patience level."""
+
+            response = await self.llm_client.generate_response(assessment_prompt)
+            
+            try:
+                new_patience = int(response.strip())
+                new_patience = max(0, min(100, new_patience))  # Clamp 0-100
+                
+                old_patience = self.patience_level[channel_id]
+                self.patience_level[channel_id] = new_patience
+                
+                print(f"😤 Patience update for channel {channel_id}: {old_patience} → {new_patience}")
+                
+            except ValueError:
+                print(f"❌ Invalid patience assessment response: {response}")
+                
+        except Exception as e:
+            print(f"❌ Error assessing patience: {e}")
+    
     async def generate_and_send_response(self, trigger_message: discord.Message):
         """Generate and send PyQwerty response"""
         try:
@@ -177,8 +247,17 @@ class PyQwertyBot:
             # Get recent message history for context
             recent_messages = self.message_history.get(channel_id, [])[-20:]  # Last 20 messages
             
-            # Build prompt with message history
-            prompt = self.prompt_builder.build_prompt(recent_messages, trigger_message)
+            # Get current patience level for this channel
+            current_patience = self.patience_level.get(channel_id, 70)
+            
+            # Build prompt with message history, patience, and all settings
+            prompt = self.prompt_builder.build_prompt(
+                recent_messages, 
+                trigger_message, 
+                patience_level=current_patience,
+                allow_long_messages=self.allow_long_messages,
+                allow_gifs=self.allow_gifs
+            )
             
             print(f"🧠 Generating response for: \"{trigger_message.content[:50]}...\"")
             
@@ -189,26 +268,134 @@ class PyQwertyBot:
                 print("❌ Empty response from LLM")
                 return
             
-            # Validate and adjust response to match style (removes mentions, uses replies instead)
-            validated_response = self.style_validator.validate_and_adjust(response)
+            # Check if response contains a GIF command
+            gif_url = self.extract_gif_command(response)
             
-            print(f"💬 Sending response: \"{validated_response}\"")
-            
-            # Check if response should be a reply (if it would have mentioned someone)
-            should_reply = self.should_use_reply(response, trigger_message)
-            
-            if should_reply:
-                # Send as reply to the original message
-                await trigger_message.reply(validated_response)
+            if gif_url:
+                # Handle GIF response
+                await self.send_gif_response(trigger_message, response, gif_url)
             else:
-                # Send as regular message
-                await trigger_message.channel.send(validated_response)
+                # Handle regular text response
+                validated_response = self.style_validator.validate_and_adjust(response, self.allow_long_messages)
+                
+                print(f"💬 Sending response: \"{validated_response}\"")
+                
+                # Check if response should be a reply (if it would have mentioned someone)
+                should_reply = self.should_use_reply(response, trigger_message)
+                
+                if should_reply:
+                    # Send as reply to the original message
+                    await trigger_message.reply(validated_response)
+                else:
+                    # Send as regular message
+                    await trigger_message.channel.send(validated_response)
             
             # Update last response time
             self.last_response_time[channel_id] = datetime.now()
             
         except Exception as e:
             print(f"❌ Error generating response: {e}")
+    
+    def extract_gif_command(self, response: str) -> str:
+        """Extract GIF URL from response if present"""
+        import re
+        
+        # Look for GIF command format: [GIF: search_term]
+        gif_match = re.search(r'\[GIF:\s*([^\]]+)\]', response, re.IGNORECASE)
+        if gif_match:
+            search_term = gif_match.group(1).strip()
+            return self.get_gif_url(search_term)
+        
+        return None
+    
+    def get_gif_url(self, search_term: str) -> str:
+        """Get a GIF URL for the search term using embeddable direct links"""
+        # Use reliable GIF URLs that Discord will embed
+        predefined_gifs = {
+            'fire': 'https://c.tenor.com/SOVMSXAQbrcAAAAC/fire-flame.gif',
+            'rage': 'https://c.tenor.com/Q6VJvI2tTJgAAAAC/mad-angry.gif',
+            'angry': 'https://c.tenor.com/fqYKuph4LesAAAAC/angry-mad.gif',
+            'frustrated': 'https://c.tenor.com/1MTtKJKdoe8AAAAC/frustrated-annoyed.gif',
+            'cooked': 'https://c.tenor.com/5iRznPZtxQ4AAAAC/cooked-done.gif',
+            'washed': 'https://c.tenor.com/XR1Gq-RGdSMAAAAC/washed-up.gif',
+            'crying': 'https://c.tenor.com/BpNuKy7D1KYAAAAC/crying-sad.gif',
+            'dead': 'https://c.tenor.com/UeMFAlw6mVcAAAAC/dead-skull.gif',
+            'gg': 'https://c.tenor.com/mGGe6k5iPqkAAAAC/gg-good-game.gif',
+            'valorant': 'https://c.tenor.com/WNF7k-_DdKAAAAAC/valorant-riot.gif',
+            'minecraft': 'https://c.tenor.com/aSyKY8JsB-8AAAAC/minecraft-block.gif',
+            'gaming': 'https://c.tenor.com/1Z6mNMxKgJwAAAAC/gaming-gamer.gif',
+            'bruh': 'https://c.tenor.com/1okcayEZflIAAAAC/bruh-moment.gif',
+            'cringe': 'https://c.tenor.com/xFOprSGKFJkAAAAC/cringe-awkward.gif',
+            'sus': 'https://c.tenor.com/Uh7L3BxhfYMAAAAC/sus-suspicious.gif',
+            'sheesh': 'https://c.tenor.com/cJgEOhG9TS8AAAAC/sheesh-damn.gif',
+            'no way': 'https://c.tenor.com/8-DfXPJVP-YAAAAC/no-way-shocked.gif',
+            'what': 'https://c.tenor.com/lqaGkRhWQe8AAAAC/what-confused.gif'
+        }
+        
+        search_lower = search_term.lower()
+        
+        # Try exact match first
+        if search_lower in predefined_gifs:
+            return predefined_gifs[search_lower]
+        
+        # Try partial matches
+        for key, url in predefined_gifs.items():
+            if key in search_lower or search_lower in key:
+                return url
+        
+        # Default fallback GIF for unknown terms
+        return predefined_gifs.get('bruh', 'https://c.tenor.com/1okcayEZflIAAAAC/bruh-moment.gif')
+    
+    async def send_gif_response(self, trigger_message: discord.Message, original_response: str, gif_url: str):
+        """Send a GIF response with optional text using Discord embeds"""
+        import re
+        
+        # Extract text part (remove GIF command)
+        text_response = re.sub(r'\[GIF:\s*[^\]]+\]', '', original_response, flags=re.IGNORECASE).strip()
+        
+        # Validate any remaining text
+        if text_response:
+            validated_text = self.style_validator.validate_and_adjust(text_response, self.allow_long_messages)
+        else:
+            validated_text = ""
+        
+        print(f"🎬 Sending GIF: {gif_url}")
+        if validated_text:
+            print(f"💬 With text: \"{validated_text}\"")
+        
+        # Create embed for better GIF display
+        embed = discord.Embed(description=validated_text if validated_text else "")
+        embed.set_image(url=gif_url)
+        embed.color = 0x7289DA  # Discord blurple
+        
+        # Determine if should reply
+        should_reply = self.should_use_reply(original_response, trigger_message)
+        
+        # Send the message with embedded GIF
+        try:
+            if should_reply:
+                if validated_text:
+                    await trigger_message.reply(content=validated_text, embed=embed)
+                else:
+                    await trigger_message.reply(embed=embed)
+            else:
+                if validated_text:
+                    await trigger_message.channel.send(content=validated_text, embed=embed)
+                else:
+                    await trigger_message.channel.send(embed=embed)
+        except discord.HTTPException:
+            # Fallback to just URL if embed fails
+            print("⚠️ Embed failed, sending as URL")
+            if should_reply:
+                if validated_text:
+                    await trigger_message.reply(f"{validated_text}\n{gif_url}")
+                else:
+                    await trigger_message.reply(gif_url)
+            else:
+                if validated_text:
+                    await trigger_message.channel.send(f"{validated_text}\n{gif_url}")
+                else:
+                    await trigger_message.channel.send(gif_url)
     
     def should_use_reply(self, original_response: str, trigger_message: discord.Message) -> bool:
         """Determine if response should be sent as a reply based on context"""
@@ -263,7 +450,72 @@ class PyQwertyBot:
         
         elif command == 'status':
             status = "Active" if self.is_active else "Paused"
-            await message.channel.send(f"📊 PyQwerty bot status: {status}")
+            channel_id = message.channel.id
+            patience = self.patience_level.get(channel_id, 70)
+            long_msgs = "Enabled" if self.allow_long_messages else "Disabled"
+            gifs = "Enabled" if self.allow_gifs else "Disabled"
+            patience_auto = "Enabled" if self.patience_enabled else "Disabled"
+            await message.channel.send(f"📊 PyQwerty bot status: {status}\n🎯 Response rate: {int(self.base_response_rate * 100)}%\n😤 Patience level: {patience}/100\n🤖 Auto patience: {patience_auto}\n📝 Long messages: {long_msgs}\n🎬 GIFs: {gifs}")
+        
+        elif command.startswith('rate '):
+            try:
+                new_rate = int(command.split()[1])
+                if 0 <= new_rate <= 100:
+                    self.base_response_rate = new_rate / 100
+                    await message.channel.send(f"🎯 Response rate set to {new_rate}%")
+                else:
+                    await message.channel.send("❌ Rate must be between 0-100")
+            except (ValueError, IndexError):
+                await message.channel.send("❌ Usage: `!py rate <0-100>`")
+        
+        elif command == 'longmsg':
+            self.allow_long_messages = not self.allow_long_messages
+            status = "enabled" if self.allow_long_messages else "disabled"
+            await message.channel.send(f"📝 Long messages {status}")
+        
+        elif command == 'gifs':
+            self.allow_gifs = not self.allow_gifs
+            status = "enabled" if self.allow_gifs else "disabled"
+            await message.channel.send(f"🎬 GIFs {status}")
+        
+        elif command == 'autopatience':
+            self.patience_enabled = not self.patience_enabled
+            status = "enabled" if self.patience_enabled else "disabled"
+            await message.channel.send(f"🤖 Automatic patience assessment {status}")
+        
+        elif command.startswith('patience '):
+            try:
+                channel_id = message.channel.id
+                new_patience = int(command.split()[1])
+                if 0 <= new_patience <= 100:
+                    self.patience_level[channel_id] = new_patience
+                    await message.channel.send(f"😤 Patience level set to {new_patience}/100")
+                else:
+                    await message.channel.send("❌ Patience must be between 0-100")
+            except (ValueError, IndexError):
+                await message.channel.send("❌ Usage: `!py patience <0-100>`")
+        
+        elif command == 'help':
+            help_text = """🤖 **PyQwerty Bot Commands**
+            
+`!py pause` - Pause bot responses
+`!py resume` - Resume bot responses  
+`!py status` - Show bot status, response rate, patience level, settings
+`!py rate <0-100>` - Set response rate percentage
+`!py longmsg` - Toggle long message mode on/off
+`!py gifs` - Toggle GIF responses on/off
+`!py autopatience` - Toggle automatic patience assessment on/off
+`!py patience <0-100>` - Manually set patience level (0=furious, 100=chill)
+`!py help` - Show this help message
+
+**Examples:**
+`!py rate 50` - Respond to 50% of messages
+`!py longmsg` - Allow PyQwerty to write longer responses
+`!py gifs` - Enable PyQwerty to reply with reaction GIFs
+`!py autopatience` - Disable AI patience assessment (manual control only)
+`!py patience 20` - Make PyQwerty angry/frustrated (will send angry GIFs)
+`!py patience 90` - Make PyQwerty chill and friendly"""
+            await message.channel.send(help_text)
     
     async def start(self):
         """Start the bot"""
